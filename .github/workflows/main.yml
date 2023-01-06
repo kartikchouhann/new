@@ -16,6 +16,26 @@ jobs:
       with:
         python-version: 3.7
     
-    - run: terraform init
-    - run: terraform apply -auto-approve
-
+    - name: Install dependencies
+      run: |
+        python -m venv env
+        source env/bin/activate
+        pip install google-auth google-auth-oauthlib
+    
+    - name: Set environment variables
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+    
+    - name: Obtain OAuth access token
+      run: python -c "import google.auth; creds = google.auth.default(); print(creds.token)"
+    
+    - name: Set OAuth access token secret
+      run: echo "$GOOGLE_AUTH_TOKEN" | gh secret set GCP_OAUTH_ACCESS_TOKEN -
+    
+    - name: Initialize Terraform
+      run: terraform init
+    
+    - name: Create VM
+      run: terraform apply -auto-approve
+      env:
+        GOOGLE_OAUTH_ACCESS_TOKEN: ${{ secrets.GCP_OAUTH_ACCESS_TOKEN }}
